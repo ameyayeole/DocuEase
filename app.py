@@ -63,7 +63,7 @@ def get_text_chunks(text):
     return chunks
 
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="embedding-001")
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
@@ -90,10 +90,9 @@ def get_summary(text):
     """
     
     prompt = PromptTemplate(template=summary_prompt, input_variables=["context"])
-    model = ChatGoogleGenerativeAI(model="models/gemini-pro", temperature=0.3)
-    chain = LLMChain(prompt=prompt, llm=model)
-    
     try:
+        model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+        chain = LLMChain(prompt=prompt, llm=model)
         summary = chain.run({"context": text})
         return summary
     except Exception as e:
@@ -101,7 +100,7 @@ def get_summary(text):
         return "Error generating summary."
 
 def user_input(user_question, language_code):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="embedding-001")
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
     docs = new_db.similarity_search(user_question)
     chain = get_conversational_chain()
@@ -124,8 +123,6 @@ def user_input(user_question, language_code):
         st.audio(audio_stream, format='audio/mp3')
     else:
         st.error(f"Invalid language code: {language_code}")
-
-
 
 def main():
     st.set_page_config(page_title="DocuEase")
