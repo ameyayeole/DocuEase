@@ -114,7 +114,7 @@ def user_input(user_question, language_code):
     if language_code in LANGUAGES:
         translated_answer = translator.translate(answer, dest=language_code).text
         st.subheader("Translated Reply")
-        st.markdown(f"**{translated_answer}**")
+        st.markdown(f"{translated_answer}")
         
         tts = gTTS(text=translated_answer, lang=language_code)
         audio_stream = io.BytesIO()
