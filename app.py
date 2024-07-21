@@ -100,14 +100,17 @@ def get_summary(text):
         st.error(f"Error generating summary: {e}")
         return "Error generating summary."
 
-def user_input(user_question, language_code):
+def user_input(user_question, language_code, context):
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
     docs = new_db.similarity_search(user_question)
     chain = get_conversational_chain()
-    response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+    context_text = " ".join([f"Q: {q} A: {a}" for q, a in context])
+    response = chain({"input_documents": docs, "context": context_text, "question": user_question}, return_only_outputs=True)
     
     answer = response["output_text"]
+    context.append((user_question, answer))
+    
     st.subheader("Reply")
     st.write(answer)
     
@@ -125,13 +128,15 @@ def user_input(user_question, language_code):
     else:
         st.error(f"Invalid language code: {language_code}")
 
-
-
 def main():
     st.set_page_config(page_title="DocuEase")
     st.title("DocuEase📄")
 
     st.header("Chat with Document")
+    
+    if "context" not in st.session_state:
+        st.session_state.context = []
+        st.session_state.chat_history = ""
     
     uploaded_files = st.file_uploader("Upload your PDF, DOCX, or PPTX files", accept_multiple_files=True)
     
@@ -163,7 +168,10 @@ def main():
     language = st.selectbox("Select Language", options=list(LANGUAGES.keys()), format_func=lambda x: LANGUAGES[x])
 
     if user_question and language:
-        user_input(user_question, language)
+        user_input(user_question, language, st.session_state.context)
+        st.session_state.chat_history += f"User: {user_question}\nBot: {st.session_state.context[-1][1]}\n\n"
+        
+    st.text_area("Chat History", value=st.session_state.chat_history, height=400)
 
 if __name__ == "__main__":
     main()
