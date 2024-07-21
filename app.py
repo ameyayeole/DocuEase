@@ -128,10 +128,10 @@ def user_input(user_question, language_code):
 
 
 def main():
-    st.set_page_config(page_title="Chat Documents")
-    st.title("Chat with Documents")
+    st.set_page_config(page_title="DocuEase")
+    st.title("DocuEase📄")
 
-    st.header("Upload and Process Your Files")
+    st.header("Chat with Documents")
     
     uploaded_files = st.file_uploader("Upload your PDF, DOCX, or PPTX files", accept_multiple_files=True)
     
