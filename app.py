@@ -5,7 +5,7 @@ from pptx import Presentation
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
@@ -63,9 +63,13 @@ def get_text_chunks(text):
     return chunks
 
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    vector_store.save_local("faiss_index")
+    try:
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+        vector_store.save_local("faiss_index")
+    except Exception as e:
+        st.error(f"Error creating vector store: {e}")
+        raise
 
 def get_conversational_chain():
     prompt_template = """
@@ -101,32 +105,35 @@ def get_summary(text):
         return "Error generating summary."
 
 def user_input(user_question, language_code, context):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
-    chain = get_conversational_chain()
-    context_text = " ".join([f"Q: {q} A: {a}" for q, a in context])
-    response = chain({"input_documents": docs, "context": context_text, "question": user_question}, return_only_outputs=True)
-    
-    answer = response["output_text"]
-    context.append((user_question, answer))
-    
-    st.subheader("Reply")
-    st.write(answer)
-    
-    if language_code in LANGUAGES:
-        translated_answer = translator.translate(answer, dest=language_code).text
-        st.subheader("Translated Reply")
-        st.markdown(f"{translated_answer}")
+    try:
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+        docs = new_db.similarity_search(user_question)
+        chain = get_conversational_chain()
+        context_text = " ".join([f"Q: {q} A: {a}" for q, a in context])
+        response = chain({"input_documents": docs, "context": context_text, "question": user_question}, return_only_outputs=True)
         
-        tts = gTTS(text=translated_answer, lang=language_code)
-        audio_stream = io.BytesIO()
-        tts.write_to_fp(audio_stream)
-        audio_stream.seek(0)
+        answer = response["output_text"]
+        context.append((user_question, answer))
         
-        st.audio(audio_stream, format='audio/mp3')
-    else:
-        st.error(f"Invalid language code: {language_code}")
+        st.subheader("Reply")
+        st.write(answer)
+        
+        if language_code in LANGUAGES:
+            translated_answer = translator.translate(answer, dest=language_code).text
+            st.subheader("Translated Reply")
+            st.markdown(f"{translated_answer}")
+            
+            tts = gTTS(text=translated_answer, lang=language_code)
+            audio_stream = io.BytesIO()
+            tts.write_to_fp(audio_stream)
+            audio_stream.seek(0)
+            
+            st.audio(audio_stream, format='audio/mp3')
+        else:
+            st.error(f"Invalid language code: {language_code}")
+    except Exception as e:
+        st.error(f"Error during user input processing: {e}")
 
 def main():
     st.set_page_config(page_title="DocuEase")
@@ -155,9 +162,12 @@ def main():
 
         if st.button("Submit & Process"):
             with st.spinner("Processing..."):
-                text_chunks = get_text_chunks(text)
-                get_vector_store(text_chunks)
-                st.success("Processing complete. You can now ask questions or summarize the document.")
+                try:
+                    text_chunks = get_text_chunks(text)
+                    get_vector_store(text_chunks)
+                    st.success("Processing complete. You can now ask questions or summarize the document.")
+                except Exception as e:
+                    st.error(f"Error during processing: {e}")
 
         if st.button("Summarize Document"):
             with st.spinner("Generating summary..."):
