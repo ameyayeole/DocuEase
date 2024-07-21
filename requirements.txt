@@ -10,4 +10,4 @@ chromadb
 faiss-cpu
 langchain_google_genai
 gtts
-googletrans==4.0.0rc1
+googletrans=4.0.0rc1
